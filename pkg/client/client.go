@@ -125,5 +125,12 @@ func configure(app *cli.Cli) {
 			}
 		})
 
+	   c.Command("switch", "Select the project as the current by name", func(c *cli.Cmd) {
+		  c.Action = func() {
+			 p.SwitchProj(*name)
+		  }
+	   })
+
+
 	})
 }
