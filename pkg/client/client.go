@@ -1,15 +1,14 @@
 package client
 
 import (
-	"github.com/boltdb/bolt"
 	"github.com/jawher/mow.cli"
 	"github.com/lastbackend/lastbackend/libs/http"
 	"github.com/lastbackend/lastbackend/libs/log"
 	p "github.com/lastbackend/lastbackend/pkg/client/cmd/project"
+	"github.com/lastbackend/lastbackend/pkg/client/cmd/service"
 	u "github.com/lastbackend/lastbackend/pkg/client/cmd/user"
 	"github.com/lastbackend/lastbackend/pkg/client/config"
 	"github.com/lastbackend/lastbackend/pkg/client/context"
-	"github.com/lastbackend/lastbackend/utils"
 	"os"
 )
 
@@ -50,15 +49,14 @@ func Run() {
 
 		ctx.HTTP = http.New(cfg.ApiHost)
 
-		dir := utils.GetHomeDir() + "/.lb"
+		ctx.Storage = new(context.LocalStorage)
 
-		utils.MkDir(dir, 0755)
-		ctx.Storage, err = bolt.Open(dir+"/lb.db", 0755, nil)
+		err = ctx.Storage.Init()
 		if err != nil {
-			ctx.Log.Fatal(err)
+			ctx.Log.Error(err)
 		}
 
-		ctx.Session.Get()
+		ctx.Storage.Get("session", nil)
 	}
 
 	configure(app)
@@ -80,6 +78,9 @@ func configure(app *cli.Cli) {
 	})
 	app.Command("whoami", "Display the current user's login name", func(c *cli.Cmd) {
 		c.Action = u.WhoamiCmd
+	})
+	app.Command("logout", "logout from account", func(c *cli.Cmd) {
+		c.Action = u.LogoutCmd
 	})
 
 	app.Command("projects", "Display the project list", func(c *cli.Cmd) {
@@ -133,4 +134,31 @@ func configure(app *cli.Cli) {
 
 
 	})
+
+	app.Command("service", "Service management", func(c *cli.Cmd) {
+		c.Spec = "[SERVICE_NAME]"
+		var service_name = c.String(cli.StringArg{
+			Name:      "SERVICE_NAME",
+			Value:     "",
+			Desc:      "name of service",
+			HideValue: true,
+		})
+		c.Command("create", "create new service", func(c *cli.Cmd) {
+			c.Action = func() {
+				service.Create(*service_name)
+			}
+		})
+		c.Command("inspect", "examine the inspect", func(c *cli.Cmd) {
+			c.Action = func() {
+				service.Inspect(*service_name)
+			}
+		})
+		c.Command("remove", "remove an existing service", func(c *cli.Cmd) {
+			c.Action = func() {
+				service.Remove(*service_name)
+			}
+		})
+
+	})
+
 }

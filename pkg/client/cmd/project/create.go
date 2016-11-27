@@ -18,7 +18,7 @@ func CreateCmd(name, description string) {
 
 	err := Create(name, description)
 	if err != nil {
-		ctx.Log.Error(err) // TODO: Need handle error and print to console
+		ctx.Log.Error(err)
 		return
 	}
 }
@@ -26,30 +26,33 @@ func CreateCmd(name, description string) {
 func Create(name, description string) error {
 
 	var (
-		err   error
-		ctx   = context.Get()
-		token *string
+		err error
+		ctx = context.Get()
 	)
-
-	token, err = ctx.Session.Get()
-	if token == nil {
+	token := struct {
+		Token string `json:"token"`
+	}{}
+	err = ctx.Storage.Get("session", &token)
+	if token.Token == "" {
 		return errors.New(e.StatusAccessDenied)
 	}
 
-	er := e.Http{}
-	res := model.Project{}
+	er := new(e.Http)
+	res := new(model.Project)
 
 	_, _, err = ctx.HTTP.
 		POST("/project").
 		AddHeader("Content-Type", "application/json").
-		AddHeader("Authorization", "Bearer "+*token).
+		AddHeader("Authorization", "Bearer "+token.Token).
 		BodyJSON(createS{name, description}).
-		Request(&res, &er) // TODO: Need handle er
+		Request(&res, er)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Need handle response status code
+	if er.Code != 0 {
+		return errors.New(e.Message(er.Status))
+	}
 
 	return nil
 }
